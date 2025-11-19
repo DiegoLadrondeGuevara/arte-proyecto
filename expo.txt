@@ -1,1 +1,30 @@
 EchoArt fusiona emociones y arte digital, permitiendo a los usuarios expresar sus sentimientos a través de tecnología avanzada. Inspirado en el arte contemporáneo, utiliza IA y herramientas interactivas para crear experiencias visuales únicas y personalizadas.
+sls plugin install -n serverless-python-requirements
+sls deploy --stage dev
+
+:~/arteBDeploy (main) $ sls deploy --stage dev
+
+Deploying "api-gestion-usuarios" to stage "dev" (us-east-1)
+
+[!] Function register has a timeout of 60 seconds, but it is attached to an API Gateway with a timeout of 29 seconds. 
+
+[!] Function login has a timeout of 60 seconds, but it is attached to an API Gateway with a timeout of 29 seconds. 
+
+[!] Function get_upload_url has a timeout of 60 seconds, but it is attached to an API Gateway with a timeout of 29 seconds. 
+
+[!] Function ai_generate has a timeout of 60 seconds, but it is attached to an API Gateway with a timeout of 29 seconds. 
+
+✔ Service deployed to stack api-gestion-usuarios-dev (55s)
+
+endpoints:
+  POST - https://y25ok2g1o9.execute-api.us-east-1.amazonaws.com/dev/auth/register
+  POST - https://y25ok2g1o9.execute-api.us-east-1.amazonaws.com/dev/auth/login
+  POST - https://y25ok2g1o9.execute-api.us-east-1.amazonaws.com/dev/images/upload-url
+  POST - https://y25ok2g1o9.execute-api.us-east-1.amazonaws.com/dev/images/generate
+functions:
+  register: api-gestion-usuarios-dev-register (21 MB)
+  login: api-gestion-usuarios-dev-login (21 MB)
+  get_upload_url: api-gestion-usuarios-dev-get_upload_url (21 MB)
+  ai_generate: api-gestion-usuarios-dev-ai_generate (21 MB)
+
+:~/arteBDeploy (main) $ 
