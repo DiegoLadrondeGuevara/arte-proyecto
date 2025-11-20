@@ -47,7 +47,7 @@ const GenerateArtPage: React.FC = () => {
 
             // --- PASO 2: Subir el archivo a S3 directamente ---
             setStatusMessage('2/3: Subiendo imagen directamente a S3...');
-            await uploadFileToS3(uploadUrl, selectedFile, selectedFile.type);
+            await uploadFileToS3(uploadUrl, selectedFile);
             
             // --- PASO 3: Llamar a la Lambda de Generación IA ---
             setStatusMessage('3/3: Subida exitosa. Llamando a la IA (puede tardar hasta 29s)...');

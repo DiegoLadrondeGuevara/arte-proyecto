@@ -47,7 +47,7 @@ const RegisterPage: React.FC = () => {
             await register(credentials);
             
             // Éxito: Navegar al Dashboard después del registro (y login automático)
-            navigate('/'); 
+            navigate('/generate'); 
         } catch (err: unknown) {
             console.error("Error en el registro:", err);
             // Mostrar un mensaje de error más específico si está disponible
