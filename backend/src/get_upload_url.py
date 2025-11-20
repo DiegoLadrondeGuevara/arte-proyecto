@@ -3,86 +3,98 @@ import boto3
 import uuid
 import os
 
+# Inicialización de clientes y variables de entorno
 s3_client = boto3.client('s3')
-# Lee el nombre de la tabla de las variables de entorno
-DYNAMODB_TABLE_NAME = os.environ.get('DYNAMODB_TABLE_NAME', 'usuario_bd')
-# Lee el nombre del bucket S3 de las variables de entorno
-BUCKET_NAME = os.environ.get('S3_BUCKET_NAME', 'mi-bucket-imagenes-usuarios') 
-
 dynamodb = boto3.resource('dynamodb')
-table = dynamodb.Table(DYNAMODB_TABLE_NAME)
 
+DYNAMODB_TABLE_NAME = os.environ.get('DYNAMODB_TABLE_NAME', 'usuario_bd')
+BUCKET_NAME = os.environ.get('S3_BUCKET_NAME', 'mi-bucket-imagenes-usuarios')
+
+table = dynamodb.Table(DYNAMODB_TABLE_NAME)
 
 def lambda_handler(event, context):
     # Definición de encabezados CORS
     cors_headers = {
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*' # Habilitado por el API Gateway, pero se incluye por seguridad
+        'Access-Control-Allow-Origin': '*'
     }
-    
+
     try:
-        # Parse del body
+        # --- 1. PROCESAR BODY ---
         body = json.loads(event['body']) if isinstance(event.get('body'), str) else event.get('body', {})
-        
-        # Obtener token del header Authorization
+
+        # --- 2. AUTENTICACIÓN Y EXTRACCIÓN DE USER_ID ---
         headers = event.get('headers', {})
-        # Buscar en 'Authorization' o 'authorization' (API Gateway puede normalizar)
         auth_header = headers.get('Authorization', headers.get('authorization', ''))
         token = auth_header.replace('Bearer ', '')
-        
+
         if not token:
             return {
                 'statusCode': 401,
                 'headers': cors_headers,
                 'body': json.dumps({'error': 'Token no proporcionado'})
             }
-        
-        # Buscar usuario por token (Scan - Nota: Usar GSI si fuera un sistema en producción real)
+
         response = table.scan(
             FilterExpression='#token = :token',
             ExpressionAttributeNames={'#token': 'token'},
             ExpressionAttributeValues={':token': token},
-            Limit=1 # Solo necesitamos uno
+            Limit=1
         )
-        
+
         if not response['Items']:
             return {
                 'statusCode': 401,
                 'headers': cors_headers,
                 'body': json.dumps({'error': 'Token inválido'})
             }
-        
+
         user = response['Items'][0]
         user_id = user['user_id']
-        
-        # Obtener tipo de archivo y generar nombre único
-        file_extension = body.get('fileExtension', 'jpg')
-        content_type = body.get('contentType', 'image/jpeg')
-        file_name = f"{uuid.uuid4()}.{file_extension}"
-        s3_key = f"users/{user_id}/{file_name}"
-        
-        # Generar URL prefirmada para subir la imagen (PUT)
+
+        # --- 3. EXTRACCIÓN DE PARÁMETROS DEL FRONTEND ---
+        # El frontend envía: { fileName, fileType (ignoramos este) }
+        file_name_original = body.get('fileName')
+        # ⚠️ ¡FORZAMOS EL CONTENT-TYPE A JPG!
+        content_type = 'image/jpeg'
+
+        # Validaciones de entrada
+        if not file_name_original:
+            return {
+                'statusCode': 400,
+                'headers': cors_headers,
+                'body': json.dumps({'error': 'Falta parámetro: fileName'})
+            }
+
+        # --- 4. PREPARAR CLAVE S3 ---
+        file_extension = file_name_original.split('.')[-1]
+        file_name_uuid = f"{uuid.uuid4()}.{file_extension}"
+        s3_key = f"users/{user_id}/{file_name_uuid}"
+
+        # --- 5. GENERAR URL PREFIRMADA ---
+        # La URL debe ser lo más simple posible.
         presigned_url = s3_client.generate_presigned_url(
             'put_object',
             Params={
                 'Bucket': BUCKET_NAME,
                 'Key': s3_key,
-                'ContentType': content_type
+                # ¡YA NO SE FIRMA NINGÚN ENCABEZADO!
             },
-            ExpiresIn=300 # URL válida por 5 minutos
+            ExpiresIn=300  # URL válida por 5 minutos
         )
-        
+
+        # --- 6. RESPUESTA EXITOSA ---
         return {
             'statusCode': 200,
             'headers': cors_headers,
             'body': json.dumps({
                 'message': 'URL de subida generada',
                 'uploadUrl': presigned_url,
-                'imageKey': s3_key,
+                's3Key': s3_key,
                 'expiresIn': 300
             })
         }
-        
+
     except Exception as e:
         print(f"Error en GetUploadUrl: {str(e)}")
         return {

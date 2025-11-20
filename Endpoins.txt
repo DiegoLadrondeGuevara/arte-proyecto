@@ -8,3 +8,8 @@ functions:
   login: api-gestion-usuarios-dev-login (21 MB)
   get_upload_url: api-gestion-usuarios-dev-get_upload_url (21 MB)
   ai_generate: api-gestion-usuarios-dev-ai_generate (
+
+
+
+    npm install axios
+    npm install react-router-dom
