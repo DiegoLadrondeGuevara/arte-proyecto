@@ -7,13 +7,15 @@ import os
 s3_client = boto3.client('s3')
 dynamodb = boto3.resource('dynamodb')
 
+# Variables de entorno
 DYNAMODB_TABLE_NAME = os.environ.get('DYNAMODB_TABLE_NAME', 'usuario_bd')
 BUCKET_NAME = os.environ.get('S3_BUCKET_NAME', 'mi-bucket-imagenes-usuarios')
 
 table = dynamodb.Table(DYNAMODB_TABLE_NAME)
 
+
 def lambda_handler(event, context):
-    # Definición de encabezados CORS
+    # Encabezados CORS
     cors_headers = {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*'
@@ -23,12 +25,13 @@ def lambda_handler(event, context):
         # --- 1. PROCESAR BODY ---
         body = json.loads(event['body']) if isinstance(event.get('body'), str) else event.get('body', {})
 
-        # --- 2. AUTENTICACIÓN Y EXTRACCIÓN DE USER_ID ---
+        # --- 2. AUTENTICACIÓN ---
         headers = event.get('headers', {})
         auth_header = headers.get('Authorization', headers.get('authorization', ''))
-        token = auth_header.replace('Bearer ', '')
+        token = auth_header.replace('Bearer ', '').strip()
 
         if not token:
+            print("ERROR: Token no proporcionado.")
             return {
                 'statusCode': 401,
                 'headers': cors_headers,
@@ -43,6 +46,7 @@ def lambda_handler(event, context):
         )
 
         if not response['Items']:
+            print(f"ERROR: Token inválido o no encontrado: {token[:10]}...")
             return {
                 'statusCode': 401,
                 'headers': cors_headers,
@@ -51,14 +55,12 @@ def lambda_handler(event, context):
 
         user = response['Items'][0]
         user_id = user['user_id']
+        print(f"Token validado para user_id: {user_id}")
 
-        # --- 3. EXTRACCIÓN DE PARÁMETROS DEL FRONTEND ---
-        # El frontend envía: { fileName, fileType (ignoramos este) }
+        # --- 3. PARÁMETROS DEL FRONTEND ---
         file_name_original = body.get('fileName')
-        # ⚠️ ¡FORZAMOS EL CONTENT-TYPE A JPG!
         content_type = 'image/jpeg'
 
-        # Validaciones de entrada
         if not file_name_original:
             return {
                 'statusCode': 400,
@@ -66,24 +68,23 @@ def lambda_handler(event, context):
                 'body': json.dumps({'error': 'Falta parámetro: fileName'})
             }
 
-        # --- 4. PREPARAR CLAVE S3 ---
+        # --- 4. GENERAR CLAVE S3 ---
         file_extension = file_name_original.split('.')[-1]
         file_name_uuid = f"{uuid.uuid4()}.{file_extension}"
         s3_key = f"users/{user_id}/{file_name_uuid}"
 
         # --- 5. GENERAR URL PREFIRMADA ---
-        # La URL debe ser lo más simple posible.
         presigned_url = s3_client.generate_presigned_url(
             'put_object',
             Params={
                 'Bucket': BUCKET_NAME,
                 'Key': s3_key,
-                # ¡YA NO SE FIRMA NINGÚN ENCABEZADO!
+                'ContentType': content_type
             },
-            ExpiresIn=300  # URL válida por 5 minutos
+            ExpiresIn=300
         )
 
-        # --- 6. RESPUESTA EXITOSA ---
+        # --- 6. RESPUESTA ---
         return {
             'statusCode': 200,
             'headers': cors_headers,
@@ -96,7 +97,7 @@ def lambda_handler(event, context):
         }
 
     except Exception as e:
-        print(f"Error en GetUploadUrl: {str(e)}")
+        print(f"Error fatal en GetUploadUrl: {str(e)}")
         return {
             'statusCode': 500,
             'headers': cors_headers,
