@@ -4,8 +4,7 @@ import type { RegisterCredentials, LoginCredentials, AuthResponse } from '../typ
 
 // ⚠️ IMPORTANTE: Reemplaza esta URL con la URL base de tu API Gateway
 // Ejemplo: https://y25ok2g1o9.execute-api.us-east-1.amazonaws.com/dev
-const API_BASE_URL = 'https://rjxs7mob98.execute-api.us-east-1.amazonaws.com/dev'; 
-
+const API_BASE_URL = "https://2i4in2nwq6.execute-api.us-east-1.amazonaws.com/dev";
 /**
  * Función para registrar un nuevo usuario.
  * @param credentials - Datos de registro (email, user, password).

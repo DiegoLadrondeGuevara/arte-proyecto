@@ -1,15 +1,15 @@
-ndpoints:
-  POST - https://rjxs7mob98.execute-api.us-east-1.amazonaws.com/dev/auth/register
-  POST - https://rjxs7mob98.execute-api.us-east-1.amazonaws.com/dev/auth/login
-  POST - https://rjxs7mob98.execute-api.us-east-1.amazonaws.com/dev/images/upload-url
-  POST - https://rjxs7mob98.execute-api.us-east-1.amazonaws.com/dev/images/generate
+endpoints:
+  POST - https://2i4in2nwq6.execute-api.us-east-1.amazonaws.com/dev/auth/register
+  POST - https://2i4in2nwq6.execute-api.us-east-1.amazonaws.com/dev/auth/login
+  POST - https://2i4in2nwq6.execute-api.us-east-1.amazonaws.com/dev/images/upload-url
+  POST - https://2i4in2nwq6.execute-api.us-east-1.amazonaws.com/dev/images/generate
 functions:
-  register: api-gestion-usuarios-dev-register (21 MB)
-  login: api-gestion-usuarios-dev-login (21 MB)
-  get_upload_url: api-gestion-usuarios-dev-get_upload_url (21 MB)
-  ai_generate: api-gestion-usuarios-dev-ai_generate (
-
-
-
+  register: api-gestion-usuarios-dev-register (12 kB)
+  login: api-gestion-usuarios-dev-login (12 kB)
+  auth_checker: api-gestion-usuarios-dev-auth_checker (12 kB)
+  get_upload_url: api-gestion-usuarios-dev-get_upload_url (12 kB)
+  ai_generate: api-gestion-usuario
+  
+:~/arteBDeploy (main) $ 
     npm install axios
     npm install react-router-dom

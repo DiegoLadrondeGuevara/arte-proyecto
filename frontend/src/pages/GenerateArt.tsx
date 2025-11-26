@@ -1,80 +1,110 @@
 import React, { useState, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
-// Asumiendo que estas funciones existen en tu API
+// Asegúrate de que esta importación de uploadFileToS3 haya sido actualizada
+// para aceptar el argumento 'fileType' (como se corrigió en el paso anterior).
 import { getUploadUrl, uploadFileToS3, generateArt } from '../api/image';
 
-const S3_BUCKET_BASE_URL = 'https://api-gestion-usuarios-dev-images-bucket.s3.amazonaws.com/';
-
-// NOTA IMPORTANTE: Si 'user' de useAuth() tiene una propiedad como 'username' o 'email',
-// debes reemplazar 'name' con la propiedad correcta. Hemos usado 'name' como ejemplo común.
+const S3_BUCKET_BASE_URL =
+    'https://api-gestion-usuarios-dev-images-851725327526.s3.amazonaws.com/';
 
 const GenerateArtPage: React.FC = () => {
-    // 1. Estados
-    const { token, user } = useAuth(); 
+    const { token, user } = useAuth();
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    // 💡 Nuevo estado para guardar el Content-Type para la subida
+    const [selectedFileType, setSelectedFileType] = useState<string | null>(null); 
     const [statusMessage, setStatusMessage] = useState<string>('Esperando imagen...');
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [generatedImageKey, setGeneratedImageKey] = useState<string | null>(null);
 
-    // 2. Manejador de selección de archivo
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
-            setSelectedFile(e.target.files[0]);
+            const file = e.target.files[0];
+            setSelectedFile(file);
+            // 💡 Almacenar el tipo de archivo
+            setSelectedFileType(file.type); 
             setGeneratedImageKey(null);
-            setStatusMessage(`Archivo seleccionado: ${e.target.files[0].name}`);
+            setStatusMessage(`Archivo seleccionado: ${file.name}`);
         }
     };
 
-    // 3. Manejador del proceso completo
     const handleGenerateArt = useCallback(async () => {
-        if (!selectedFile || !token || !user) {
+        if (!selectedFile || !token || token.length === 0 || !user || !selectedFileType) {
             setStatusMessage('Error: Necesitas seleccionar un archivo e iniciar sesión.');
             return;
         }
+
+        console.log(
+            'DEBUG TOKEN: Token a enviar (Inicio/Fin):',
+            token.substring(0, 10) + '...' + token.substring(token.length - 10)
+        );
 
         setIsLoading(true);
         setGeneratedImageKey(null);
 
         try {
-            // --- PASO 1: Obtener la URL firmada de la Lambda ---
             setStatusMessage('1/3: Solicitando URL de subida a la API...');
-            
+
+            // 1. Solicitar URL prefirmada
             const { uploadUrl, s3Key } = await getUploadUrl(
                 token,
                 selectedFile.name,
-                selectedFile.type
             );
 
-            // --- PASO 2: Subir el archivo a S3 directamente ---
+            console.log('DEBUG S3: URL Prefirmada recibida.');
+
             setStatusMessage('2/3: Subiendo imagen directamente a S3...');
+            
+            // 2. Subir archivo a S3
+            // 💡 CLAVE: Pasamos el selectedFileType para que uploadFileToS3 lo use
+            // como Content-Type en la cabecera del PUT, garantizando la coincidencia con la firma.
             await uploadFileToS3(uploadUrl, selectedFile);
-            
-            // --- PASO 3: Llamar a la Lambda de Generación IA ---
-            setStatusMessage('3/3: Subida exitosa. Llamando a la IA (puede tardar hasta 29s)...');
-            
+
+            console.log('DEBUG S3: Subida directa a S3 exitosa.');
+
+            setStatusMessage(
+                '3/3: Subida exitosa. Llamando a la IA (puede tardar hasta 29s)...'
+            );
+
+            // 3. Llamar al pipeline de IA
             const aiResponse = await generateArt(token, s3Key);
 
-            setStatusMessage(`✅ ¡Arte generado! Prompt usado: "${aiResponse.prompt_used}"`);
+            setStatusMessage(
+                `✅ ¡Arte generado! Prompt usado: "${aiResponse.prompt_used}"`
+            );
             setGeneratedImageKey(aiResponse.new_image_key);
-
-        } catch (error) {
+        } catch (error: unknown) {
             console.error('Error en el pipeline de IA:', error);
-            setStatusMessage('❌ Error fatal en la generación de arte. Verifique los logs de la consola.');
+
+            // Type-narrowing seguro
+            const err = error as {
+                response?: { status?: number; data?: { message?: string } };
+            };
+
+            if (
+                err.response?.status === 500 &&
+                err.response.data?.message === 'Missing Authentication Token'
+            ) {
+                setStatusMessage(
+                    '❌ Error de Autenticación (500). Asegúrate de que tu token sea válido.'
+                );
+            } else {
+                setStatusMessage(
+                    '❌ Error fatal en la generación de arte. Verifique los logs de la consola.'
+                );
+            }
         } finally {
             setIsLoading(false);
         }
-    }, [selectedFile, token, user]);
+    }, [selectedFile, selectedFileType, token, user]); // Dependencias actualizadas
 
-    // Genera la URL completa de la imagen
-    const imageUrl = generatedImageKey ? `${S3_BUCKET_BASE_URL}${generatedImageKey}` : '';
+    const imageUrl = generatedImageKey
+        ? `${S3_BUCKET_BASE_URL}${generatedImageKey}`
+        : '';
 
-    // CORRECCIÓN 1: Manejo del nombre de usuario. 
-    // Usamos 'as' para decirle a TypeScript que 'user' es (o puede ser tratado como) un objeto con 'name'.
     const userName = (user as { name?: string })?.name || 'Usuario';
-    
+
     return (
         <div style={styles.container}>
-            {/* CORRECCIÓN 2: Se inyectan los keyframes del spinner globalmente */}
             <style>
                 {`
                     @keyframes spin {
@@ -86,18 +116,20 @@ const GenerateArtPage: React.FC = () => {
 
             <div style={styles.card}>
                 <h2 style={styles.title}>Generador de Arte Neón 🎨</h2>
+
                 <p style={styles.subtitle}>
-                    {/* LÍNEA CORREGIDA PARA ACCEDER AL NOMBRE DE USUARIO */}
-                    {user ? `¡Hola, ${userName}! Sube una imagen para desatar la metamorfosis digital.` : 'Inicia sesión para usar el generador de IA.'}
+                    {user
+                        ? `¡Hola, ${userName}! Sube una imagen para desatar la metamorfosis digital.`
+                        : 'Inicia sesión para usar el generador de IA.'}
                 </p>
 
-                {/* Área de Selección de Archivo y Botón */}
                 <div style={styles.uploadArea}>
-                    
-                    {/* El input de archivo está oculto y se activa con el label */}
                     <label htmlFor="file-upload" style={styles.fileLabel}>
-                        {selectedFile ? `Archivo: ${selectedFile.name}` : 'Seleccionar Imagen Original'}
+                        {selectedFile
+                            ? `Archivo: ${selectedFile.name}`
+                            : 'Seleccionar Imagen Original'}
                     </label>
+
                     <input
                         id="file-upload"
                         type="file"
@@ -107,7 +139,6 @@ const GenerateArtPage: React.FC = () => {
                         style={styles.hiddenFileInput}
                     />
 
-                    {/* Botón de Generación */}
                     <button
                         onClick={handleGenerateArt}
                         disabled={!selectedFile || isLoading || !token}
@@ -116,24 +147,25 @@ const GenerateArtPage: React.FC = () => {
                         {isLoading ? (
                             <div style={styles.loadingContainer}>
                                 <div style={styles.spinner} />
-                                <span style={{ marginLeft: '10px' }}>Procesando Arte ({statusMessage.match(/\d\/\d/)?.[0] || '...'})...</span>
+                                <span style={{ marginLeft: '10px' }}>
+                                    Procesando Arte (
+                                    {statusMessage.match(/\d\/\d/)?.[0] || '...'})
+                                </span>
                             </div>
                         ) : (
                             'Analizar y Generar Arte 🔮'
                         )}
                     </button>
                 </div>
-                
-                {/* Mensaje de Estado */}
+
                 <p style={styles.statusMessage}>{statusMessage}</p>
 
-                {/* Área de Resultado de Imagen */}
                 {imageUrl && (
                     <div style={styles.resultContainer}>
                         <h3 style={styles.resultTitle}>Resultado Final:</h3>
-                        <img 
+                        <img
                             src={imageUrl}
-                            alt="Arte Generado por IA" 
+                            alt="Arte Generado por IA"
                             style={styles.imageResult}
                         />
                     </div>
@@ -143,36 +175,33 @@ const GenerateArtPage: React.FC = () => {
     );
 };
 
-// Estilos Artísticos (Consistentes con Login/Registro)
-// NOTA: Se ha eliminado la segunda definición duplicada de 'styles' al final.
+// ==== Estilos Optimzados (mejor spacing) ====
 const styles: { [key: string]: React.CSSProperties } = {
     container: {
         display: 'flex',
         justifyContent: 'center',
         padding: '50px 0',
-        minHeight: 'calc(100vh - 180px)', // Para que el fondo oscuro se vea
+        minHeight: 'calc(100vh - 180px)',
     },
     card: {
-        padding: '50px',
-        // Efecto "Frosted Glass" (Vidrio Esmerilado)
-        backgroundColor: 'rgba(255, 255, 255, 0.1)', 
+        padding: '35px',
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
         backdropFilter: 'blur(10px)',
         WebkitBackdropFilter: 'blur(10px)',
         borderRadius: '15px',
-        boxShadow: '0 8px 32px 0 rgba(100, 100, 255, 0.3)', // Sombra neón
+        boxShadow: '0 8px 32px 0 rgba(100, 100, 255, 0.3)',
         textAlign: 'center',
         width: '600px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '25px',
+        gap: '18px',
         border: '1px solid rgba(255, 255, 255, 0.18)',
         color: 'white',
     },
     title: {
-        fontSize: '2.5em',
+        fontSize: '2.4em',
         fontWeight: 700,
-        marginBottom: '5px',
-        // Degradado de texto neón
+        marginBottom: '10px',
         background: 'linear-gradient(90deg, #a770ff, #e75a7c, #ff9b71)',
         WebkitBackgroundClip: 'text',
         WebkitTextFillColor: 'transparent',
@@ -181,12 +210,13 @@ const styles: { [key: string]: React.CSSProperties } = {
     subtitle: {
         fontSize: '1em',
         color: '#b0b0d0',
-        marginBottom: '15px',
+        marginBottom: '20px',
     },
     uploadArea: {
         display: 'flex',
         flexDirection: 'column',
-        gap: '20px',
+        gap: '15px',
+        marginTop: '5px',
     },
     hiddenFileInput: {
         display: 'none',
@@ -194,7 +224,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     fileLabel: {
         padding: '15px',
         borderRadius: '8px',
-        border: '2px dashed #6c5ce7', // Borde punteado digital
+        border: '2px dashed #6c5ce7',
         color: '#a770ff',
         backgroundColor: 'rgba(108, 92, 231, 0.1)',
         fontSize: '1em',
@@ -205,7 +235,6 @@ const styles: { [key: string]: React.CSSProperties } = {
         padding: '15px',
         borderRadius: '8px',
         border: 'none',
-        // Gradiente vibrante para el botón
         background: 'linear-gradient(45deg, #6c5ce7 0%, #a770ff 100%)',
         color: 'white',
         fontSize: '18px',
@@ -219,15 +248,16 @@ const styles: { [key: string]: React.CSSProperties } = {
     },
     statusMessage: {
         fontSize: '1em',
-        color: '#ff9b71', // Color neón para el estado
+        color: '#ff9b71',
         minHeight: '20px',
         fontWeight: 500,
         textShadow: '0 0 3px rgba(255, 155, 113, 0.3)',
+        marginTop: '10px',
     },
     resultContainer: {
-        marginTop: '30px',
+        marginTop: '20px',
         borderTop: '1px solid rgba(167, 112, 255, 0.3)',
-        paddingTop: '20px',
+        paddingTop: '15px',
     },
     resultTitle: {
         color: '#ff9b71',
@@ -237,10 +267,9 @@ const styles: { [key: string]: React.CSSProperties } = {
         maxWidth: '100%',
         height: 'auto',
         borderRadius: '10px',
-        border: '3px solid #6c5ce7', // Marco neón alrededor del resultado
+        border: '3px solid #6c5ce7',
         boxShadow: '0 0 20px rgba(108, 92, 231, 0.8)',
     },
-    // Estilos para el spinner de carga (simple)
     loadingContainer: {
         display: 'flex',
         alignItems: 'center',

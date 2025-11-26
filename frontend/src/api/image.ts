@@ -1,95 +1,90 @@
 // src/api/image.ts
-import axios from 'axios';
+import axios from "axios";
 
-// ⚠️ URL base correcta
-const API_BASE_URL = 'https://rjxs7mob98.execute-api.us-east-1.amazonaws.com/dev';
+const API_BASE_URL =
+  "https://2i4in2nwq6.execute-api.us-east-1.amazonaws.com/dev";
 
 interface UploadUrlResponse {
-    uploadUrl: string;
-    s3Key: string;
-}
-
-/**
- * Extraer x-amz-security-token desde la URL firmada.
- */
-function extractSecurityToken(url: string): string | null {
-    try {
-        const urlParams = new URLSearchParams(new URL(url).search);
-        return urlParams.get('x-amz-security-token');
-    } catch (e) {
-        console.error("Error al parsear la URL para extraer token.", e);
-        return null;
-    }
+  uploadUrl: string;
+  s3Key: string;
+  expiresIn: number;
 }
 
 /**
  * 1. Solicitar URL firmada al backend.
  */
 export async function getUploadUrl(
-    token: string,
-    fileName: string,
-    fileType: string
+  token: string,
+  fileName: string
 ): Promise<UploadUrlResponse> {
+  console.log("🔵 [getUploadUrl] solicitando URL firmada…");
+  console.log("➡️ fileName:", fileName);
 
-    const response = await axios.post<UploadUrlResponse>(
-        `${API_BASE_URL}/images/upload-url`,
-        { fileName, fileType },
-        {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-            },
-        }
-    );
+  const response = await axios.post<UploadUrlResponse>(
+    `${API_BASE_URL}/images/upload-url`,
+    { fileName },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      withCredentials: false,
+    }
+  );
 
-    return response.data;
+  console.log("🟢 [getUploadUrl] Respuesta backend:", response.data);
+
+  return response.data;
 }
 
 /**
- * 2. Subir archivo a S3 usando la URL firmada.
+ * 2. Subir archivo RAW a S3 con la URL firmada.
  */
-export async function uploadFileToS3(
-    uploadUrl: string,
-    file: File,
-): Promise<void> {
+export async function uploadFileToS3(uploadUrl: string, file: File): Promise<void> {
+  console.log("🔵 [uploadFileToS3] iniciando subida a S3…");
 
-    const securityToken = extractSecurityToken(uploadUrl);
+  const response = await fetch(uploadUrl, {
+    method: "PUT",
+    body: file,
+  });
 
-    const headers: Record<string, string> = {
-        'Content-Type': 'image/jpeg',
-    };
+  console.log("🟢 [uploadFileToS3] S3 respondió:", response.status);
 
-    if (securityToken) {
-        headers['x-amz-security-token'] = securityToken;
-    }
-
-    await axios.put(uploadUrl, file, { headers });
+  if (!response.ok) {
+    const text = await response.text();
+    console.error("❌ S3 error:", text);
+    throw new Error("Error subiendo a S3");
+  }
 }
 
 interface GenerateArtResponse {
-    message: string;
-    prompt_used: string;
-    new_image_key: string;
+  message: string;
+  prompt_used: string;
+  new_image_key: string;
 }
 
 /**
- * 3. Llamar al backend para generar arte AI.
+ * 3. Llamar al backend para generar arte AI
  */
 export async function generateArt(
-    token: string,
-    s3KeyToAnalyze: string
+  token: string,
+  s3KeyToAnalyze: string
 ): Promise<GenerateArtResponse> {
+  console.log("🔵 [generateArt] solicitando generación AI…", s3KeyToAnalyze);
 
-    const response = await axios.post<GenerateArtResponse>(
-        `${API_BASE_URL}/images/generate`,
-        { s3KeyToAnalyze },
-        {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-            },
-        }
-    );
+  const response = await axios.post<GenerateArtResponse>(
+    `${API_BASE_URL}/images/generate`,
+    { s3KeyToAnalyze },
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      withCredentials: false,
+    }
+  );
 
-    return response.data;
+  console.log("🟢 [generateArt] Respuesta backend:", response.data);
+
+  return response.data;
 }
