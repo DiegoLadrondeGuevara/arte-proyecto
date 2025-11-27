@@ -1,7 +1,6 @@
+// src/pages/GenerateArtPage.tsx — Versión Cinemática & Surrealista
 import React, { useState, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
-// Asegúrate de que esta importación de uploadFileToS3 haya sido actualizada
-// para aceptar el argumento 'fileType' (como se corrigió en el paso anterior).
 import { getUploadUrl, uploadFileToS3, generateArt } from '../api/image';
 
 const S3_BUCKET_BASE_URL =
@@ -9,130 +8,94 @@ const S3_BUCKET_BASE_URL =
 
 const GenerateArtPage: React.FC = () => {
     const { token, user } = useAuth();
+
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    // 💡 Nuevo estado para guardar el Content-Type para la subida
-    const [selectedFileType, setSelectedFileType] = useState<string | null>(null); 
-    const [statusMessage, setStatusMessage] = useState<string>('Esperando imagen...');
-    const [isLoading, setIsLoading] = useState<boolean>(false);
+    const [selectedFileType, setSelectedFileType] = useState<string | null>(null);
+    const [statusMessage, setStatusMessage] = useState('Esperando imagen...');
+    const [isLoading, setIsLoading] = useState(false);
     const [generatedImageKey, setGeneratedImageKey] = useState<string | null>(null);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files.length > 0) {
+        if (e.target.files?.length) {
             const file = e.target.files[0];
             setSelectedFile(file);
-            // 💡 Almacenar el tipo de archivo
-            setSelectedFileType(file.type); 
+            setSelectedFileType(file.type);
             setGeneratedImageKey(null);
             setStatusMessage(`Archivo seleccionado: ${file.name}`);
         }
     };
 
     const handleGenerateArt = useCallback(async () => {
-        if (!selectedFile || !token || token.length === 0 || !user || !selectedFileType) {
-            setStatusMessage('Error: Necesitas seleccionar un archivo e iniciar sesión.');
+        if (!selectedFile || !token || !selectedFileType || !user) {
+            setStatusMessage('❌ Necesitas seleccionar un archivo e iniciar sesión.');
             return;
         }
-
-        console.log(
-            'DEBUG TOKEN: Token a enviar (Inicio/Fin):',
-            token.substring(0, 10) + '...' + token.substring(token.length - 10)
-        );
 
         setIsLoading(true);
         setGeneratedImageKey(null);
 
         try {
-            setStatusMessage('1/3: Solicitando URL de subida a la API...');
+            setStatusMessage('1/3: Solicitando permiso al universo…');
 
-            // 1. Solicitar URL prefirmada
-            const { uploadUrl, s3Key } = await getUploadUrl(
-                token,
-                selectedFile.name,
-            );
+            const { uploadUrl, s3Key } = await getUploadUrl(token, selectedFile.name);
 
-            console.log('DEBUG S3: URL Prefirmada recibida.');
-
-            setStatusMessage('2/3: Subiendo imagen directamente a S3...');
-            
-            // 2. Subir archivo a S3
-            // 💡 CLAVE: Pasamos el selectedFileType para que uploadFileToS3 lo use
-            // como Content-Type en la cabecera del PUT, garantizando la coincidencia con la firma.
+            setStatusMessage('2/3: Elevando la imagen hacia la nube…');
             await uploadFileToS3(uploadUrl, selectedFile);
 
-            console.log('DEBUG S3: Subida directa a S3 exitosa.');
+            setStatusMessage('3/3: Invocando la IA para transmutar tu arte…');
 
-            setStatusMessage(
-                '3/3: Subida exitosa. Llamando a la IA (puede tardar hasta 29s)...'
-            );
-            
-            console.log('DEBUG REQUEST: Preparando llamada a generateArt');
-            console.log('URL:', 'https://2i4in2nwq6.execute-api.us-east-1.amazonaws.com/dev/images/generate');
-            console.log('S3 Key a analizar:', s3Key);
-            console.log('Token:', token ? token.substring(0, 10) + '...' + token.substring(token.length - 10) : 'no hay token');
-
-            // 3. Llamar al pipeline de IA
             const aiResponse = await generateArt(token, s3Key);
 
-            setStatusMessage(
-                `✅ ¡Arte generado! Prompt usado: "${aiResponse.prompt_used}"`
-            );
+            setStatusMessage(`✨ Arte generado. Prompt usado: "${aiResponse.prompt_used}"`);
             setGeneratedImageKey(aiResponse.new_image_key);
-        } catch (error: unknown) {
-            console.error('Error en el pipeline de IA:', error);
-
-            // Type-narrowing seguro
-            const err = error as {
-                response?: { status?: number; data?: { message?: string } };
-            };
-
-            if (
-                err.response?.status === 500 &&
-                err.response.data?.message === 'Missing Authentication Token'
-            ) {
-                setStatusMessage(
-                    '❌ Error de Autenticación (500). Asegúrate de que tu token sea válido.'
-                );
-            } else {
-                setStatusMessage(
-                    '❌ Error fatal en la generación de arte. Verifique los logs de la consola.'
-                );
-            }
+        } catch (err) {
+            setStatusMessage('❌ Error en la generación. Revisa la consola.');
         } finally {
             setIsLoading(false);
         }
-    }, [selectedFile, selectedFileType, token, user]); // Dependencias actualizadas
+    }, [selectedFile, selectedFileType, token, user]);
 
     const imageUrl = generatedImageKey
         ? `${S3_BUCKET_BASE_URL}${generatedImageKey}`
         : '';
 
-    const userName = (user as { name?: string })?.name || 'Usuario';
+    const userName = (user as { name?: string })?.name || 'Artista';
 
     return (
         <div style={styles.container}>
             <style>
                 {`
                     @keyframes spin {
-                        0% { transform: rotate(0deg); }
-                        100% { transform: rotate(360deg); }
+                        from { transform: rotate(0deg); }
+                        to { transform: rotate(360deg); }
+                    }
+
+                    @keyframes neonPulse {
+                        0% { box-shadow: 0 0 12px rgba(160, 80, 255, 0.5); }
+                        50% { box-shadow: 0 0 22px rgba(255, 120, 255, 0.8); }
+                        100% { box-shadow: 0 0 12px rgba(160, 80, 255, 0.5); }
                     }
                 `}
             </style>
 
             <div style={styles.card}>
-                <h2 style={styles.title}>Generador de Arte Neón 🎨</h2>
+                <h2 style={styles.title}>Generador de Arte 🔮</h2>
 
                 <p style={styles.subtitle}>
-                    {user
-                        ? `¡Hola, ${userName}! Sube una imagen para desatar la metamorfosis digital.`
-                        : 'Inicia sesión para usar el generador de IA.'}
+                    {user ? (
+                        <>Bienvenido, <span style={styles.username}>{userName}</span>.  
+                        Eleva tu imagen y deja que la IA la descomponga en arte conceptual.</>
+                    ) : (
+                        'Debes iniciar sesión para usar el generador galáctico.'
+                    )}
                 </p>
 
+                {/* Área de subida */}
                 <div style={styles.uploadArea}>
                     <label htmlFor="file-upload" style={styles.fileLabel}>
                         {selectedFile
-                            ? `Archivo: ${selectedFile.name}`
-                            : 'Seleccionar Imagen Original'}
+                            ? `📁 Archivo seleccionado: ${selectedFile.name}`
+                            : '✨ Seleccionar Imagen del Rostro'}
                     </label>
 
                     <input
@@ -151,14 +114,13 @@ const GenerateArtPage: React.FC = () => {
                     >
                         {isLoading ? (
                             <div style={styles.loadingContainer}>
-                                <div style={styles.spinner} />
-                                <span style={{ marginLeft: '10px' }}>
-                                    Procesando Arte (
-                                    {statusMessage.match(/\d\/\d/)?.[0] || '...'})
+                                <div style={styles.spinner}></div>
+                                <span style={{ marginLeft: 10 }}>
+                                    Transformando Arte…
                                 </span>
                             </div>
                         ) : (
-                            'Analizar y Generar Arte 🔮'
+                            'Transformar en Arte Conceptual 🎨'
                         )}
                     </button>
                 </div>
@@ -167,11 +129,11 @@ const GenerateArtPage: React.FC = () => {
 
                 {imageUrl && (
                     <div style={styles.resultContainer}>
-                        <h3 style={styles.resultTitle}>Resultado Final:</h3>
+                        <h3 style={styles.resultTitle}>Resultado Final</h3>
                         <img
                             src={imageUrl}
-                            alt="Arte Generado por IA"
-                            style={styles.imageResult}
+                            style={styles.resultImage}
+                            alt="Resultado generado"
                         />
                     </div>
                 )}
@@ -180,112 +142,128 @@ const GenerateArtPage: React.FC = () => {
     );
 };
 
-// ==== Estilos Optimzados (mejor spacing) ====
+/* ===========================================================
+   🎨 ESTÉTICA NEÓN + GLASSMORPHISM + SURREALISMO CINEMÁTICO
+   =========================================================== */
 const styles: { [key: string]: React.CSSProperties } = {
     container: {
+        minHeight: 'calc(100vh - 120px)',
         display: 'flex',
         justifyContent: 'center',
-        padding: '50px 0',
-        minHeight: 'calc(100vh - 180px)',
+        alignItems: 'flex-start',
+        paddingTop: '60px',
+        background: 'linear-gradient(135deg, #0a0018 0%, #120027 60%, #1f003a 100%)',
+        backgroundSize: '200% 200%',
     },
+
     card: {
-        padding: '35px',
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
-        borderRadius: '15px',
-        boxShadow: '0 8px 32px 0 rgba(100, 100, 255, 0.3)',
-        textAlign: 'center',
-        width: '600px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '18px',
-        border: '1px solid rgba(255, 255, 255, 0.18)',
+        width: '680px',
+        padding: '40px',
+        borderRadius: '20px',
+        background: 'rgba(255, 255, 255, 0.08)',
+        border: '1px solid rgba(255, 255, 255, 0.15)',
+        backdropFilter: 'blur(14px)',
+        WebkitBackdropFilter: 'blur(14px)',
         color: 'white',
+        boxShadow: '0 0 28px rgba(160, 80, 255, 0.35)',
+        animation: 'neonPulse 6s infinite',
+        textAlign: 'center',
     },
+
     title: {
-        fontSize: '2.4em',
-        fontWeight: 700,
-        marginBottom: '10px',
-        background: 'linear-gradient(90deg, #a770ff, #e75a7c, #ff9b71)',
+        fontSize: '2.5em',
+        fontWeight: 800,
+        marginBottom: 10,
+        background: 'linear-gradient(120deg, #ff70e0, #ca6bff, #70b6ff)',
         WebkitBackgroundClip: 'text',
         WebkitTextFillColor: 'transparent',
-        textShadow: '0 0 5px rgba(255, 100, 255, 0.5)',
+        textShadow: '0 0 14px rgba(255, 120, 255, 0.45)',
     },
+
     subtitle: {
-        fontSize: '1em',
-        color: '#b0b0d0',
-        marginBottom: '20px',
+        fontSize: '1.1em',
+        color: '#d0c6ff',
+        marginBottom: 28,
+        lineHeight: 1.5,
     },
+
+    username: {
+        color: '#ff9bf0',
+        fontWeight: 700,
+    },
+
     uploadArea: {
         display: 'flex',
         flexDirection: 'column',
-        gap: '15px',
-        marginTop: '5px',
+        gap: 18,
     },
-    hiddenFileInput: {
-        display: 'none',
-    },
+
+    hiddenFileInput: { display: 'none' },
+
     fileLabel: {
-        padding: '15px',
-        borderRadius: '8px',
-        border: '2px dashed #6c5ce7',
-        color: '#a770ff',
-        backgroundColor: 'rgba(108, 92, 231, 0.1)',
-        fontSize: '1em',
-        cursor: 'pointer',
-        transition: 'background-color 0.3s',
-    },
-    button: {
-        padding: '15px',
-        borderRadius: '8px',
-        border: 'none',
-        background: 'linear-gradient(45deg, #6c5ce7 0%, #a770ff 100%)',
-        color: 'white',
-        fontSize: '18px',
-        fontWeight: 600,
-        cursor: 'pointer',
-        boxShadow: '0 4px 15px rgba(108, 92, 231, 0.5)',
-        transition: 'opacity 0.3s, transform 0.1s',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    statusMessage: {
-        fontSize: '1em',
-        color: '#ff9b71',
-        minHeight: '20px',
-        fontWeight: 500,
-        textShadow: '0 0 3px rgba(255, 155, 113, 0.3)',
-        marginTop: '10px',
-    },
-    resultContainer: {
-        marginTop: '20px',
-        borderTop: '1px solid rgba(167, 112, 255, 0.3)',
-        paddingTop: '15px',
-    },
-    resultTitle: {
-        color: '#ff9b71',
-        marginBottom: '15px',
-    },
-    imageResult: {
-        maxWidth: '100%',
-        height: 'auto',
+        padding: '16px',
         borderRadius: '10px',
-        border: '3px solid #6c5ce7',
-        boxShadow: '0 0 20px rgba(108, 92, 231, 0.8)',
+        border: '2px dashed #9f70ff',
+        background: 'rgba(150, 70, 255, 0.12)',
+        color: '#d8b7ff',
+        fontSize: '1.05em',
+        cursor: 'pointer',
+        transition: '0.25s',
     },
+
+    button: {
+        padding: '16px',
+        borderRadius: '12px',
+        border: 'none',
+        cursor: 'pointer',
+        fontSize: '1.15em',
+        fontWeight: 700,
+        background: 'linear-gradient(135deg, #ff5de6, #a770ff, #57d9ff)',
+        color: 'white',
+        boxShadow: '0 0 16px rgba(160, 80, 255, 0.55)',
+    },
+
+    statusMessage: {
+        marginTop: 14,
+        fontSize: '1.05em',
+        color: '#ffbb9b',
+        minHeight: 28,
+        textShadow: '0 0 6px rgba(255, 150, 120, 0.4)',
+    },
+
+    resultContainer: {
+        marginTop: 30,
+        borderTop: '1px solid rgba(255, 255, 255, 0.15)',
+        paddingTop: 20,
+    },
+
+    resultTitle: {
+        fontSize: '1.4em',
+        color: '#a770ff',
+        marginBottom: 18,
+        textShadow: '0 0 8px rgba(167, 112, 255, 0.5)',
+    },
+
+    resultImage: {
+        maxWidth: '100%',
+        borderRadius: 14,
+        border: '3px solid #a770ff',
+        boxShadow: '0 0 24px rgba(167,112,255,0.8)',
+    },
+
+    // Loader neon spinner
     loadingContainer: {
         display: 'flex',
         alignItems: 'center',
+        justifyContent: 'center',
     },
     spinner: {
-        border: '3px solid rgba(255, 255, 255, 0.3)',
-        borderTop: '3px solid #fff',
+        width: 22,
+        height: 22,
         borderRadius: '50%',
-        width: '20px',
-        height: '20px',
-        animation: 'spin 1s linear infinite',
+        border: '3px solid rgba(255,255,255,0.25)',
+        borderTop: '3px solid #fff',
+        animation: 'spin 0.9s linear infinite',
     },
 };
 

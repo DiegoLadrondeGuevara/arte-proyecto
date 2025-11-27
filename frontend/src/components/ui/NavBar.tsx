@@ -1,19 +1,19 @@
-// src/components/ui/NavBar.tsx
+// src/components/ui/NavBar.tsx — Versión Cinemática & Surrealista
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 
-// Icono SVG simple
+// Ícono artístico luminoso
 const PaintBrushIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg
         {...props}
         xmlns="http://www.w3.org/2000/svg"
-        width="24"
-        height="24"
+        width="28"
+        height="28"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
-        strokeWidth="2"
+        strokeWidth="2.4"
         strokeLinecap="round"
         strokeLinejoin="round"
     >
@@ -28,7 +28,7 @@ const PaintBrushIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 );
 
 const NavBar: React.FC = () => {
-    const {logout, user } = useAuth();
+    const { logout, user } = useAuth();
     const navigate = useNavigate();
 
     const handleLogout = () => {
@@ -41,24 +41,23 @@ const NavBar: React.FC = () => {
         { path: '/generate', label: 'Generar Arte', requiresAuth: true },
     ];
 
-    // Detectar nombre seguro
-    const username =
-        user?.username || user?.email || "Artista";
+    const username = user?.username || user?.email || "Artista";
 
     return (
         <nav style={styles.nav}>
+
+            {/* Halo luminoso */}
+            <div style={styles.glowBar}></div>
+
             {/* Logo */}
             <div style={styles.logoContainer}>
                 <PaintBrushIcon style={styles.logoIcon} />
-                <Link
-                    to={user ? "/" : "/login"}
-                    style={styles.logoText}
-                >
-                    ArtFlow AI
+                <Link to={user ? "/" : "/login"} style={styles.logoText}>
+                    EchoArt
                 </Link>
             </div>
 
-            {/* Links */}
+            {/* Enlaces */}
             <div style={styles.linksContainer}>
                 {user ? (
                     <>
@@ -68,9 +67,8 @@ const NavBar: React.FC = () => {
                             </Link>
                         ))}
 
-                        {/* Usuario */}
                         <span style={styles.userInfo}>
-                            Hola, <span style={styles.username}>{username}</span>
+                            🌙 <span style={styles.username}>{username}</span>
                         </span>
 
                         <button onClick={handleLogout} style={styles.logoutButton}>
@@ -79,11 +77,12 @@ const NavBar: React.FC = () => {
                     </>
                 ) : (
                     <>
-                        <Link to="/login" style={styles.loginLink}>
+                        <Link to="/login" style={styles.authLink}>
                             Iniciar Sesión
                         </Link>
+
                         <Link to="/register" style={styles.registerButton}>
-                            Registrarse
+                            Crear Cuenta
                         </Link>
                     </>
                 )}
@@ -92,79 +91,111 @@ const NavBar: React.FC = () => {
     );
 };
 
-// Estilos
+// 🎨 Estilos Cinemáticos Surrealistas
 const styles: { [key: string]: React.CSSProperties } = {
     nav: {
-        backgroundColor: '#1f1c2c',
-        padding: '15px 40px',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3)',
-        borderBottom: '1px solid rgba(167, 112, 255, 0.2)',
+        position: "relative",
+        padding: "15px 45px",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        backdropFilter: "blur(14px)",
+        WebkitBackdropFilter: "blur(14px)",
+        background: "rgba(10, 0, 25, 0.45)",
+        borderBottom: "1px solid rgba(255, 255, 255, 0.16)",
+        boxShadow: "0 0 25px rgba(120, 60, 255, 0.25)",
+        zIndex: 100,
     },
+
+    // Línea luminosa debajo del nav
+    glowBar: {
+        position: "absolute",
+        bottom: 0,
+        left: 0,
+        width: "100%",
+        height: "3px",
+        background: "linear-gradient(90deg, #ff5de6, #9f79ff, #57d9ff)",
+        boxShadow: "0 0 15px rgba(165, 120, 255, 0.7)",
+    },
+
     logoContainer: {
-        display: 'flex',
-        alignItems: 'center',
-        textDecoration: 'none',
+        display: "flex",
+        alignItems: "center",
+        gap: "10px",
     },
+
     logoIcon: {
-        color: '#ff9b71',
-        marginRight: '10px',
-        filter: 'drop-shadow(0 0 5px rgba(255, 155, 113, 0.6))',
+        color: "#ff70e0",
+        filter: "drop-shadow(0 0 8px rgba(255, 100, 200, 0.8))",
     },
+
     logoText: {
-        fontSize: '1.5em',
-        fontWeight: 700,
-        background: 'linear-gradient(90deg, #a770ff, #e75a7c)',
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent',
-        textDecoration: 'none',
+        fontSize: "1.7em",
+        fontWeight: 900,
+        background: "linear-gradient(120deg, #ff70e0, #a770ff, #57d0ff)",
+        WebkitBackgroundClip: "text",
+        WebkitTextFillColor: "transparent",
+        textDecoration: "none",
+        letterSpacing: "1.5px",
+        textShadow: "0 0 10px rgba(255, 150, 255, 0.4)",
     },
+
     linksContainer: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '25px',
+        display: "flex",
+        alignItems: "center",
+        gap: "28px",
     },
+
     navLink: {
-        color: '#b0b0d0',
-        textDecoration: 'none',
-        fontSize: '1em',
+        color: "#d8cfff",
+        fontSize: "1em",
+        textDecoration: "none",
+        transition: "0.25s",
+        padding: "5px 10px",
+        borderRadius: "6px",
     },
+
     userInfo: {
-        color: '#e0e0e0',
-        fontSize: '0.95em',
+        color: "#dcd2ff",
+        fontSize: "1em",
+        fontWeight: 400,
     },
+
     username: {
-        color: '#ff9b71',
-        fontWeight: 600,
+        color: "#ff9bee",
+        fontWeight: 700,
+        textShadow: "0 0 8px rgba(255, 120, 255, 0.6)",
     },
-    loginLink: {
-        color: '#b0b0d0',
-        textDecoration: 'none',
-        fontSize: '1em',
-    },
-    registerButton: {
-        padding: '8px 15px',
-        borderRadius: '5px',
-        border: 'none',
-        background: 'linear-gradient(45deg, #6c5ce7 0%, #a770ff 100%)',
-        color: 'white',
-        fontSize: '1em',
-        fontWeight: 600,
-        cursor: 'pointer',
-        textDecoration: 'none',
-        boxShadow: '0 2px 10px rgba(108, 92, 231, 0.4)',
-    },
+
     logoutButton: {
-        padding: '8px 15px',
-        borderRadius: '5px',
-        border: '1px solid #ff6b6b',
-        backgroundColor: 'transparent',
-        color: '#ff6b6b',
-        fontSize: '0.95em',
-        cursor: 'pointer',
-    }
+        padding: "8px 15px",
+        borderRadius: "8px",
+        border: "1px solid rgba(255, 80, 120, 0.8)",
+        background: "rgba(255, 80, 120, 0.08)",
+        color: "#ff7ea8",
+        cursor: "pointer",
+        boxShadow: "0 0 12px rgba(255, 100, 150, 0.35)",
+        backdropFilter: "blur(6px)",
+    },
+
+    authLink: {
+        color: "#d8cfff",
+        textDecoration: "none",
+        fontSize: "1em",
+    },
+
+    registerButton: {
+        padding: "10px 18px",
+        borderRadius: "10px",
+        border: "none",
+        background: "linear-gradient(135deg, #ff5de6, #9f79ff, #57d9ff)",
+        color: "white",
+        fontSize: "1em",
+        fontWeight: 700,
+        cursor: "pointer",
+        boxShadow: "0 0 15px rgba(165, 120, 255, 0.6)",
+        textDecoration: "none",
+    },
 };
 
 export default NavBar;

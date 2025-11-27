@@ -1,16 +1,13 @@
-// src/App.tsx (CORREGIDO)
+// src/App.tsx
 import { Routes, Route } from 'react-router-dom';
 import LoginPage from './pages/Auth/Login';
 import RegisterPage from './pages/Auth/Register';
 import ProtectedRoute from './components/common/ProtectedRoute';
-import NavBar from './components/ui/NavBar'; 
+import NavBar from './components/ui/NavBar';
 
 // 🎯 IMPORTACIÓN DEL COMPONENTE REAL DE GENERACIÓN DE ARTE
-import GenerateArtPage from '../src/pages/GenerateArt'; // <-- Asume que el archivo está en './pages/GenerateArtPage'
-
-// Componentes temporales que no usaremos
-const Dashboard = () => <h1>Dashboard Principal 👋</h1>;
-// const GenerateArt = () => <h1>Generar Arte IA 🖼️</h1>; // <-- Eliminado o ignorado
+import GenerateArtPage from './pages/GenerateArt';
+import Dashboard from './pages/Dashboard'; // <-- reemplaza el Dashboard temporal
 
 function App() {
   return (
@@ -42,7 +39,6 @@ function App() {
             path="/generate" 
             element={
               <ProtectedRoute>
-                {/* 🎯 CORRECCIÓN: Usar el componente COMPLETO */}
                 <GenerateArtPage />
               </ProtectedRoute>
             } 
