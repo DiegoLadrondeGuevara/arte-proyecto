@@ -64,6 +64,11 @@ const GenerateArtPage: React.FC = () => {
             setStatusMessage(
                 '3/3: Subida exitosa. Llamando a la IA (puede tardar hasta 29s)...'
             );
+            
+            console.log('DEBUG REQUEST: Preparando llamada a generateArt');
+            console.log('URL:', 'https://2i4in2nwq6.execute-api.us-east-1.amazonaws.com/dev/images/generate');
+            console.log('S3 Key a analizar:', s3Key);
+            console.log('Token:', token ? token.substring(0, 10) + '...' + token.substring(token.length - 10) : 'no hay token');
 
             // 3. Llamar al pipeline de IA
             const aiResponse = await generateArt(token, s3Key);
