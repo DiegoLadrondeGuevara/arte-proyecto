@@ -3,9 +3,20 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 
-// Icono SVG simple de pincel para el logo
+// Icono SVG simple
 const PaintBrushIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+        {...props}
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+    >
         <path d="M18.36 6.64l-1.42 1.42M14 4h-4L6 8v4l4 4h4l4-4V8l-4-4z" />
         <line x1="12" y1="2" x2="12" y2="4" />
         <line x1="18" y1="8" x2="20" y2="8" />
@@ -17,7 +28,7 @@ const PaintBrushIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 );
 
 const NavBar: React.FC = () => {
-    const { isAuthenticated, logout, user } = useAuth();
+    const {logout, user } = useAuth();
     const navigate = useNavigate();
 
     const handleLogout = () => {
@@ -30,38 +41,43 @@ const NavBar: React.FC = () => {
         { path: '/generate', label: 'Generar Arte', requiresAuth: true },
     ];
 
+    // Detectar nombre seguro
+    const username =
+        user?.username || user?.email || "Artista";
+
     return (
         <nav style={styles.nav}>
-            {/* Logo de la Aplicación */}
+            {/* Logo */}
             <div style={styles.logoContainer}>
                 <PaintBrushIcon style={styles.logoIcon} />
-                <Link to={isAuthenticated ? "/" : "/login"} style={styles.logoText}>
+                <Link
+                    to={user ? "/" : "/login"}
+                    style={styles.logoText}
+                >
                     ArtFlow AI
                 </Link>
             </div>
 
-            {/* Enlaces y Botones de Auth */}
+            {/* Links */}
             <div style={styles.linksContainer}>
-                {isAuthenticated && (
+                {user ? (
                     <>
-                        {/* Enlaces de Navegación */}
                         {navLinks.map((link) => (
                             <Link key={link.path} to={link.path} style={styles.navLink}>
                                 {link.label}
                             </Link>
                         ))}
 
-                        {/* Nombre de Usuario y Logout */}
+                        {/* Usuario */}
                         <span style={styles.userInfo}>
-                            Hola, <span style={styles.username}>{user?.user || 'Artista'}</span>
+                            Hola, <span style={styles.username}>{username}</span>
                         </span>
+
                         <button onClick={handleLogout} style={styles.logoutButton}>
                             Cerrar Sesión
                         </button>
                     </>
-                )}
-
-                {!isAuthenticated && (
+                ) : (
                     <>
                         <Link to="/login" style={styles.loginLink}>
                             Iniciar Sesión
@@ -76,16 +92,16 @@ const NavBar: React.FC = () => {
     );
 };
 
-// Estilos del NavBar (Oscuro y Neón)
+// Estilos
 const styles: { [key: string]: React.CSSProperties } = {
     nav: {
-        backgroundColor: '#1f1c2c', // Color base oscuro, consistente con el fondo del Login/Registro
+        backgroundColor: '#1f1c2c',
         padding: '15px 40px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3)', // Sombra sutil para darle profundidad
-        borderBottom: '1px solid rgba(167, 112, 255, 0.2)', // Línea neón sutil
+        boxShadow: '0 4px 15px rgba(0, 0, 0, 0.3)',
+        borderBottom: '1px solid rgba(167, 112, 255, 0.2)',
     },
     logoContainer: {
         display: 'flex',
@@ -93,14 +109,13 @@ const styles: { [key: string]: React.CSSProperties } = {
         textDecoration: 'none',
     },
     logoIcon: {
-        color: '#ff9b71', // Color neón/cálido para el icono
+        color: '#ff9b71',
         marginRight: '10px',
-        filter: 'drop-shadow(0 0 5px rgba(255, 155, 113, 0.6))', // Efecto de brillo neón
+        filter: 'drop-shadow(0 0 5px rgba(255, 155, 113, 0.6))',
     },
     logoText: {
         fontSize: '1.5em',
         fontWeight: 700,
-        // Degradado de texto neón para la marca
         background: 'linear-gradient(90deg, #a770ff, #e75a7c)',
         WebkitBackgroundClip: 'text',
         WebkitTextFillColor: 'transparent',
@@ -115,11 +130,6 @@ const styles: { [key: string]: React.CSSProperties } = {
         color: '#b0b0d0',
         textDecoration: 'none',
         fontSize: '1em',
-        transition: 'color 0.2s, text-shadow 0.2s',
-    },
-    navLinkHover: {
-        color: '#a770ff',
-        textShadow: '0 0 5px #a770ff',
     },
     userInfo: {
         color: '#e0e0e0',
@@ -135,7 +145,6 @@ const styles: { [key: string]: React.CSSProperties } = {
         fontSize: '1em',
     },
     registerButton: {
-        // Botón con el mismo gradiente vibrante que el Login/Registro
         padding: '8px 15px',
         borderRadius: '5px',
         border: 'none',
@@ -145,7 +154,6 @@ const styles: { [key: string]: React.CSSProperties } = {
         fontWeight: 600,
         cursor: 'pointer',
         textDecoration: 'none',
-        transition: 'opacity 0.3s',
         boxShadow: '0 2px 10px rgba(108, 92, 231, 0.4)',
     },
     logoutButton: {
@@ -156,7 +164,6 @@ const styles: { [key: string]: React.CSSProperties } = {
         color: '#ff6b6b',
         fontSize: '0.95em',
         cursor: 'pointer',
-        transition: 'background-color 0.3s, color 0.3s',
     }
 };
 
